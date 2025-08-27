@@ -1,16 +1,16 @@
 pipeline {
     agent any
     environment {
-        IMAGE_NAME = muzammil22/go-web-app // Replace with your Docker Hub username/repo
-        IMAGE_TAG = "${env.BUILD_NUMBER}" // Uses Jenkins build number for versioning
-        EC2_HOST = '44.251.25.120' // Replace with your EC2 public IP or DNS
-        DOCKER_REGISTRY = https://hub.docker.com/repository/docker/muzammil22/go-web-app/general
+        IMAGE_NAME = 'muzammil22/go-web-app'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        EC2_HOST = '44.251.25.120'
+        DOCKER_REGISTRY = 'https://index.docker.io/v1/'
     }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
-                    url: 'https://github.com/Musmmil/go-web-app.git' // Replace with your repo
+                git branch: 'main',
+                    url: 'https://github.com/Muzammil22/go-web-app.git'
             }
         }
         stage('Build Docker Image') {
@@ -23,7 +23,7 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry(DOCKER_REGISTRY, 'dockerhub-creds') {
+                    docker.withRegistry("${DOCKER_REGISTRY}", 'dockerhub-creds') {
                         dockerImage.push()
                         dockerImage.push('latest')
                     }
@@ -47,7 +47,6 @@ pipeline {
     post {
         always {
             script {
-                // Clean up Docker images locally to save space
                 sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             }
         }
