@@ -1,16 +1,15 @@
 pipeline {
     agent any
     environment {
-        IMAGE_NAME =  'muzammil22/my-go-app'// Replace with your Docker Hub username/repo
+        IMAGE_NAME = muzammil22/go-web-app // Replace with your Docker Hub username/repo
         IMAGE_TAG = "${env.BUILD_NUMBER}" // Uses Jenkins build number for versioning
         EC2_HOST = 44.251.25.120 // Replace with your EC2 public IP or DNS
-        DOCKER_REGISTRY = https://hub.docker.com/repository/docker/muzammil22/my-go-app/general
+        DOCKER_REGISTRY = https://hub.docker.com/repository/docker/muzammil22/go-web-app/general
     }
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', 
-                    credentialsId: 'github-creds', // Optional: Add if repo is private
                     url: 'https://github.com/Musmmil/go-web-app.git' // Replace with your repo
             }
         }
