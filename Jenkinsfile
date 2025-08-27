@@ -10,7 +10,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Muzammil22/go-web-app.git'
+                    url: 'https://github.com/Musmmil/go-web-app.git'
             }
         }
         stage('Build Docker Image') {
