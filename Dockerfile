@@ -1,4 +1,4 @@
-FROM tip-alpine3.22
+FROM golang:tip-alpine3.22
 WORKDIR /app
 COPY go.mod .
 RUN go mod download
