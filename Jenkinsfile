@@ -13,6 +13,21 @@ pipeline {
                     url: 'https://github.com/Musmmil/go-web-app.git'
             }
         }
+        stage('GitLeaks Scan') {
+    steps {
+        sh 'gitleaks detect --source=. -v --exit-code=1'  // --exit-code=1 fails build if secrets found
+    }
+}
+        stage('SonarQube Analysis') {
+    environment {
+        SONAR_TOKEN = credentials('sonar_token')  // Store token as Jenkins credential
+    }
+    steps {
+        withSonarQubeEnv('SonarQube') {  // Configure SonarQube server in Jenkins > Manage Jenkins > Configure System > SonarQube servers
+            sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.120.24:9000/ -Dsonar.login=$SONAR_TOKEN'
+        }
+    }
+}
         stage('Build Docker Image') {
             steps {
                 script {
@@ -20,6 +35,11 @@ pipeline {
                 }
             }
         }
+       stage('Trivy Scan') {
+            steps {
+                sh "trivy image --exit-code 1 --no-progress --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}"
+            }
+       }
         stage('Push to Docker Hub') {
             steps {
                 script {
