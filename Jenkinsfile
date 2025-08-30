@@ -5,6 +5,7 @@ pipeline {
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         EC2_HOST = '35.166.200.7'
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
+        SONAR_TOKEN = credentials('sonar_token')
     }
     stages {
         stage('Checkout') {
@@ -19,9 +20,6 @@ pipeline {
             }
         }
         stage('SonarQube Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('sonar_token')
-            }
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.120.24:9000 -Dsonar.token=$SONAR_TOKEN'
