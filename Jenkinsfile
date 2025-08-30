@@ -3,7 +3,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'muzammil22/go-web-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        EC2_HOST = '44.251.25.120'
+        EC2_HOST = '35.166.200.7 '
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
     }
     stages {
