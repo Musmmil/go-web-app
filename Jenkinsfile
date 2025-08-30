@@ -14,38 +14,39 @@ pipeline {
             }
         }
         stage('GitLeaks Scan') {
-    steps {
-        sh 'gitleaks detect --source=. -v --exit-code=1'  // --exit-code=1 fails build if secrets found
-    }
-}
-        stage('SonarQube Analysis') {
-    environment {
-        SONAR_TOKEN = credentials('sonar_token')  // Store token as Jenkins credential
-    }
-    steps {
-        withSonarQubeEnv('SonarQube') {  // Configure SonarQube server in Jenkins > Manage Jenkins > Configure System > SonarQube servers
-            sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.120.24:9000/ -Dsonar.login=$SONAR_TOKEN'
-        }
-    }
-}
-        stage('Build Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                sh 'gitleaks detect --source=. -v --exit-code=1'
+            }
+        }
+        stage('SonarQube Analysis') {
+            environment {
+                SONAR_TOKEN = credentials('sonar_token')
+            }
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.120.24:9000 -Dsonar.token=$SONAR_TOKEN'
                 }
             }
         }
-       stage('Trivy Scan') {
+        stage('Build Docker Image') {
             steps {
-                sh "trivy image --exit-code 1 --no-progress --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}"
+                script {
+                    def dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                    env.DOCKER_IMAGE = dockerImage.id // Store for later use
+                }
             }
-       }
+        }
+        stage('Trivy Scan') {
+            steps {
+                sh "trivy image --exit-code 1 --no-progress --severity HIGH,CRITICAL --ignorefile .trivyignore ${IMAGE_NAME}:${IMAGE_TAG}"
+            }
+        }
         stage('Push to Docker Hub') {
             steps {
                 script {
                     docker.withRegistry("${DOCKER_REGISTRY}", 'dockerhub-creds') {
-                        dockerImage.push()
-                        dockerImage.push('latest')
+                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push('latest')
                     }
                 }
             }
@@ -55,10 +56,10 @@ pipeline {
                 sshagent(credentials: ['ec2-ssh-key']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} \
-                        'docker pull ${IMAGE_NAME}:${IMAGE_TAG} && \
+                        "docker pull ${IMAGE_NAME}:${IMAGE_TAG} && \
                          docker stop go-app-container || true && \
                          docker rm go-app-container || true && \
-                         docker run -d --name go-app-container -p 8080:8080 ${IMAGE_NAME}:${IMAGE_TAG}'
+                         docker run -d --name go-app-container -p 8080:8080 ${IMAGE_NAME}:${IMAGE_TAG}"
                     """
                 }
             }
