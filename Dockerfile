@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.2-AS builder
+FROM tip-alpine3.22
 WORKDIR /app
 COPY go.mod .
 RUN go mod download
