@@ -75,5 +75,35 @@ pipeline {
         failure {
             echo 'Pipeline failed. Check logs for details.'
         }
+// New stage for monitoring validation
+        stage('Validate Deployment') {
+            steps {
+                script {
+                    // Wait for app to stabilize (adjust sleep as needed)
+                    sleep 30
+
+                    // Query Prometheus for metrics (example: check CPU usage)
+                    def prometheusUrl = "http://54.203.0.116:9090/api/v1/query"
+                    def cpuQuery = 'rate(container_cpu_usage_seconds_total{container="your-app-container"}[5m])'
+                    def cpuResponse = sh(script: "curl -s '${prometheusUrl}?query=${cpuQuery}' | jq -r '.data.result[0].value[1]'", returnStdout: true).trim()
+                    def cpuUsage = cpuResponse.toFloat()
+                    if (cpuUsage > 0.8) { // Example threshold: 80% CPU
+                        error "Deployment failed: CPU usage too high (${cpuUsage}"
+                    }
+
+                    // Query Loki for error logs
+                    def lokiUrl = "http://54.203.0.116:3100/loki/api/v1/query"
+                    def logQuery = '{container="your-app-container"} |~ "ERROR"'
+                    def logResponse = sh(script: "curl -s '${lokiUrl}?query=${logQuery}&limit=10' | jq -r '.data.result | length'", returnStdout: true).trim()
+                    def errorCount = logResponse.toInteger()
+                    if (errorCount > 0) {
+                        error "Deployment failed: Found ${errorCount} error logs"
+                    }
+
+                    echo "Deployment validated successfully: CPU usage=${cpuUsage}, Errors=${errorCount}"
+                }
+            }
+        }
     }
 }
+    
