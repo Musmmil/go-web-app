@@ -62,20 +62,7 @@ pipeline {
                 }
             }
         }
-    }
-    post {
-        always {
-            script {
-                sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
-            }
-        }
-        success {
-            echo 'Pipeline completed successfully! Application deployed to EC2.'
-        }
-        failure {
-            echo 'Pipeline failed. Check logs for details.'
-        }
-// New stage for monitoring validation
+        // New stage for monitoring validation
         stage('Validate Deployment') {
               steps {
                 script {
@@ -103,6 +90,20 @@ pipeline {
                     echo "Deployment validated successfully: CPU usage=${cpuUsage}, Errors=${errorCount}"
                 }
             }
+    }
+    post {
+        always {
+            script {
+                sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+            }
+        }
+        success {
+            echo 'Pipeline completed successfully! Application deployed to EC2.'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+
         }
     }
 }
