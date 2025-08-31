@@ -71,7 +71,7 @@ pipeline {
 
                     // Query Prometheus for metrics (example: check CPU usage)
                     def prometheusUrl = "http://18.236.246.206:9090/api/v1/query"
-                    def cpuQuery = 'rate(container_cpu_usage_seconds_total{container="your-app-container"}[5m])'
+                    def cpuQuery = 'rate(container_cpu_usage_seconds_total{container="go-app-container"}[5m])'
                     def cpuResponse = sh(script: "curl -s '${prometheusUrl}?query=${cpuQuery}' | jq -r '.data.result[0].value[1]'", returnStdout: true).trim()
                     def cpuUsage = cpuResponse.toFloat()
                     if (cpuUsage > 0.8) { // Example threshold: 80% CPU
@@ -80,7 +80,7 @@ pipeline {
 
                     // Query Loki for error logs
                     def lokiUrl = "http://18.236.246.206:3100/loki/api/v1/query"
-                    def logQuery = '{container="your-app-container"} |~ "ERROR"'
+                    def logQuery = '{container="go-app-container"} |~ "ERROR"'
                     def logResponse = sh(script: "curl -s '${lokiUrl}?query=${logQuery}&limit=10' | jq -r '.data.result | length'", returnStdout: true).trim()
                     def errorCount = logResponse.toInteger()
                     if (errorCount > 0) {
