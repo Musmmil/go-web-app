@@ -3,7 +3,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'muzammil22/go-web-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        EC2_HOST = '35.166.200.7'
+        EC2_HOST = '18.236.246.206'
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
         SONAR_TOKEN = credentials('sonar_token')
     }
@@ -22,7 +22,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.120.24:9000 -Dsonar.token=$SONAR_TOKEN'
+                    sh 'sonar-scanner -Dsonar.projectKey=my-golang-app -Dsonar.sources=. -Dsonar.host.url=http://35.87.201.88:9000 -Dsonar.token=$SONAR_TOKEN'
                 }
             }
         }
@@ -83,7 +83,7 @@ pipeline {
                     sleep 30
 
                     // Query Prometheus for metrics (example: check CPU usage)
-                    def prometheusUrl = "http://54.203.0.116:9090/api/v1/query"
+                    def prometheusUrl = "http://18.236.246.206:9090/api/v1/query"
                     def cpuQuery = 'rate(container_cpu_usage_seconds_total{container="your-app-container"}[5m])'
                     def cpuResponse = sh(script: "curl -s '${prometheusUrl}?query=${cpuQuery}' | jq -r '.data.result[0].value[1]'", returnStdout: true).trim()
                     def cpuUsage = cpuResponse.toFloat()
@@ -92,7 +92,7 @@ pipeline {
                     }
 
                     // Query Loki for error logs
-                    def lokiUrl = "http://54.203.0.116:3100/loki/api/v1/query"
+                    def lokiUrl = "http://18.236.246.206:3100/loki/api/v1/query"
                     def logQuery = '{container="your-app-container"} |~ "ERROR"'
                     def logResponse = sh(script: "curl -s '${lokiUrl}?query=${logQuery}&limit=10' | jq -r '.data.result | length'", returnStdout: true).trim()
                     def errorCount = logResponse.toInteger()
