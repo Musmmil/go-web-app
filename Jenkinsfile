@@ -3,9 +3,11 @@ pipeline {
     environment {
         IMAGE_NAME = 'muzammil22/go-web-app'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        EC2_HOST = '18.236.246.206'
+        EC2_HOST = '18.236.246.206' // Consider using AWS SSM or DNS for dynamic resolution
         DOCKER_REGISTRY = 'https://index.docker.io/v1/'
         SONAR_TOKEN = credentials('sonar_token')
+        PROMETHEUS_URL = 'http://18.236.246.206:9090/api/v1/query'
+        LOKI_URL = 'http://18.236.246.206:3100/loki/api/v1/query'
     }
     stages {
         stage('Checkout') {
@@ -36,7 +38,7 @@ pipeline {
         }
         stage('Trivy Scan') {
             steps {
-                sh "trivy image --exit-code 1 --no-progress --severity HIGH,CRITICAL --ignorefile .trivyignore ${IMAGE_NAME}:${IMAGE_TAG}"
+                sh "trivy image --exit-code 1 --no-progress --severity HIGH,CRITICAL --ignorefile .trivyignore ${IMAGE_NAME}:${IMAGE_TAG} || { echo 'Trivy scan failed or .trivyignore not found'; exit 1; }"
             }
         }
         stage('Push to Docker Hub') {
@@ -62,26 +64,26 @@ pipeline {
                 }
             }
         }
-        // New stage for monitoring validation
         stage('Validate Deployment') {
-              steps {
+            steps {
                 script {
-                    // Wait for app to stabilize (adjust sleep as needed)
-                    sleep 30
+                    // Health check to ensure app is ready
+                    sh "curl -s --retry 5 --retry-delay 5 http://${EC2_HOST}:8080/health || { echo 'Health check failed'; exit 1; }"
 
-                    // Query Prometheus for metrics (example: check CPU usage)
-                    def prometheusUrl = "http://18.236.246.206:9090/api/v1/query"
+                    // Install jq if not present (optional, depending on agent setup)
+                    sh 'command -v jq || sudo apt-get install -y jq || sudo yum install -y jq'
+
+                    // Query Prometheus for CPU usage
                     def cpuQuery = 'rate(container_cpu_usage_seconds_total{container="go-app-container"}[5m])'
-                    def cpuResponse = sh(script: "curl -s '${prometheusUrl}?query=${cpuQuery}' | jq -r '.data.result[0].value[1]'", returnStdout: true).trim()
+                    def cpuResponse = sh(script: "curl -s '${PROMETHEUS_URL}?query=${cpuQuery}' | jq -r '.data.result[0].value[1] // \"0\"'", returnStdout: true).trim()
                     def cpuUsage = cpuResponse.toFloat()
                     if (cpuUsage > 0.8) { // Example threshold: 80% CPU
-                        error "Deployment failed: CPU usage too high (${cpuUsage}"
+                        error "Deployment failed: CPU usage too high (${cpuUsage})"
                     }
 
                     // Query Loki for error logs
-                    def lokiUrl = "http://18.236.246.206:3100/loki/api/v1/query"
                     def logQuery = '{container="go-app-container"} |~ "ERROR"'
-                    def logResponse = sh(script: "curl -s '${lokiUrl}?query=${logQuery}&limit=10' | jq -r '.data.result | length'", returnStdout: true).trim()
+                    def logResponse = sh(script: "curl -s '${LOKI_URL}?query=${logQuery}&limit=10' | jq -r '.data.result | length'", returnStdout: true).trim()
                     def errorCount = logResponse.toInteger()
                     if (errorCount > 0) {
                         error "Deployment failed: Found ${errorCount} error logs"
@@ -90,6 +92,7 @@ pipeline {
                     echo "Deployment validated successfully: CPU usage=${cpuUsage}, Errors=${errorCount}"
                 }
             }
+        }
     }
     post {
         always {
@@ -102,9 +105,7 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed. Check logs for details.'
-        }
-
+            // Optional: Add notification (e.g., Slack, email)
         }
     }
 }
-    
