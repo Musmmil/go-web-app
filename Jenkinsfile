@@ -77,10 +77,7 @@ pipeline {
         }
 // New stage for monitoring validation
         stage('Validate Deployment') {
-            when {
-        expression { currentBuild.currentResult == 'SUCCESS' } // Run if the build is successful so far
-    }
-            steps {
+              steps {
                 script {
                     // Wait for app to stabilize (adjust sleep as needed)
                     sleep 30
